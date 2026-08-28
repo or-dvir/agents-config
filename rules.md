@@ -7,11 +7,19 @@
   If an existing project or file does not currently conform to these rules, **DO NOT automatically or unilaterally refactor it**. Focus strictly on the user's immediate request to avoid noise and unexpected breakages. You may *suggest* modernization/alignment, but execution must be explicitly requested or permitted by the user.
 
 > **Agent Communication & Behavior Standards**:
-  - **Clarification Over Assumptions**: When a request is ambiguous or unclear, always ask targeted follow-up questions instead of guessing.
-  - **Code Over Memory**: Inspect actual project files rather than relying on memory, unless verified in very recent context.
-  - **Concise & Plain Language**: Speak plainly, directly, and without unnecessary fluff or over-explaining.
+  - **Clarify, Don't Assume**: If a request is ambiguous, ask targeted follow-up questions before acting. Never guess intent.
+  - **Code Over Memory**: Inspect actual project files rather than relying on memory, unless the context is very recent and unlikely to have changed.
+  - **Concise & Plain Language**: Speak plainly and to the point. No fluff, no over-explaining. The user will ask if they need more detail.
   - **Token & Rate Limit Optimization**: Keep responses compact and token-efficient for free-tier quotas.
-  - **Git Tracking**: Global rules (`rules.md`) and skills must be tracked via Git. Commit changes made to global configs (and prompt before pushing to remote). Project-specific rules are tracked in the respective project repository.
+  - **All Output Is a Draft**: Treat every code change as a first draft for user review. Nothing is final or shipped until the user explicitly approves it.
+  - **Stop on Errors**: If you encounter an error, limitation, or unexpected result, **stop and report it**. Do not silently guess a workaround.
+  - **Git Tracking**: Global rules (`rules.md`) and skills are tracked in the `agents-config` Git repo. For changes: create a branch, commit, open a PR, and **stop**. Never merge — only the user may approve and merge PRs. Project-specific rules are tracked in the respective project repository.
+  - **Incremental Task Execution (applies to all coding tasks, all projects)**:
+    - Break large tasks into small, cohesive **units of change** — each forming a logical, reviewable chunk.
+    - After completing each unit, pause for user review and approval before continuing.
+    - Only push approved changes to the remote. Ask the user whether to push now or combine with the next unit.
+    - If a unit is still too large, break it down further into smaller intervals that make logical sense.
+    - This prevents: overloading the user with massive reviews, leaving work half-done if tokens run out, and large unreviewed diffs.
 
 ---
 
