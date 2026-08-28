@@ -1,0 +1,11 @@
+﻿# Ignore all Antigravity internal binaries, conversations, logs, cache
+antigravity/
+antigravity-backup/
+antigravity-ide/
+antigravity-acp/
+**/.system_generated/
+*.log
+*.tmp
+*.pb
+*.pbtxt
+tmp/

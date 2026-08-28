@@ -1,0 +1,16 @@
+{
+  "userSettings": {
+    "globalPermissionGrants": {
+      "allow": [
+        "command(android --version; adb --version; java -version)",
+        "command(android info)",
+        "command(android skills list)",
+        "command(android update)",
+        "read_file(C:\\Users\\Or Dvir\\.gemini\\rules.md)",
+        "command(powershell -Command \"android skills add verified-email; android skills add appfunctions\")"
+      ]
+    },
+    "remoteControlHostname": "myasuslaptop-glowing-mars",
+    "themeMode": "THEME_MODE_DARK"
+  }
+}
