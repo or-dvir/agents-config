@@ -1,4 +1,4 @@
-﻿# Ignore all Antigravity internal binaries, conversations, logs, cache
+# Ignore all Antigravity internal binaries, conversations, logs, cache
 antigravity/
 antigravity-backup/
 antigravity-ide/
@@ -10,3 +10,15 @@ antigravity-acp/
 *.pbtxt
 tmp/
 config/config.json
+
+# Local runtime state, sessions, and machine-specific configs
+projects.json*
+settings.json
+state.json
+trustedFolders.json
+google_accounts.json
+installation_id
+history/
+config/projects/
+config/node_modules/
+config/plugins/
