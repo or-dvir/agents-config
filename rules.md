@@ -75,6 +75,8 @@
     - `app/src/release/google-services.json` (Production Firebase project)
 - **Error Handling**: Use Kotlin's built-in `Result<T>` by default for repositories unless a custom sealed hierarchy (e.g. `NetworkResult<T>`) is genuinely warranted.
 - **Dependency Injection**: Modern Hilt or Koin.
+- **Import Statements & Code Hygiene**:
+  - **Never use wildcard imports (`*`)**: Always import classes, functions, and symbols explicitly. Wildcard imports pollute the namespace, obscure symbol origins, risk naming collisions, and make code harder to review.
 
 ---
 
