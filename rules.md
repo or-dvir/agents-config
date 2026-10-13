@@ -11,6 +11,21 @@
   - **Code Over Memory**: Inspect actual project files rather than relying on memory, unless the context is very recent and unlikely to have changed.
   - **Concise & Plain Language**: Speak plainly and to the point. No fluff, no over-explaining. The user will ask if they need more detail.
   - **Token & Rate Limit Optimization**: Keep responses compact and token-efficient for free-tier quotas.
+
+## Token efficiency
+
+- Search with `rg`/`grep` (or `Select-String`) using specific patterns. Never open files just to search them.
+- Read only the line ranges you need. Don't re-read a file you already read unless it changed.
+- Don't run Gradle builds unless I ask. I run builds myself.
+- If asked to build, redirect output to a file and show only errors:
+  `./gradlew.bat assembleDebug --quiet > build.log 2>&1`, then
+  `Select-String -Path build.log -Pattern "e:|error|FAILURE" | Select-Object -First 40`
+- Use `git` and `gh` CLI for Git/GitHub. Use `--stat` or `--name-only`; don't print full diffs unless I ask.
+- Web search only when local info isn't enough. One targeted search, prefer official docs.
+- No sub-agents, timers or scheduled checks unless I ask.
+- For multi-file changes, give a short plan first and wait for my OK.
+- Keep replies short. Don't repeat code you just wrote or summarize history unless asked.
+- If unsure, ask instead of exploring the codebase broadly.
   - **All Output Is a Draft**: Treat every code change as a first draft for user review. Nothing is final or shipped until the user explicitly approves it.
   - **Stop on Errors**: If you encounter an error, limitation, or unexpected result, **stop and report it**. Do not silently guess a workaround.
   - **Git Tracking**: Global rules (`rules.md`) and skills are tracked in the `agents-config` Git repo. For changes: create a branch, commit, open a PR, and **stop**. Never merge — only the user may approve and merge PRs. Project-specific rules are tracked in the respective project repository.
