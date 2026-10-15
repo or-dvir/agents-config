@@ -1,0 +1,170 @@
+name: PR Quiz
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  statuses: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: pr-quiz-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  quiz:
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/answer'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // Set to false once only requested reviewers should be able to pass the quiz.
+            const ALLOW_AUTHOR = true;
+
+            const CONTEXT = 'pr-quiz';
+            const BOT = 'github-actions[bot]';
+            const RESULT_MARKER = '<!-- pr-quiz-result -->';
+            const passMarker = (id) => `<!-- pr-quiz-pass:${id} -->`;
+
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request?.number ?? context.payload.issue.number;
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+
+            const setStatus = (state, description) =>
+              github.rest.repos.createCommitStatus({
+                owner, repo, sha: pr.head.sha, state, context: CONTEXT,
+                description: description.slice(0, 140),
+              });
+
+            const quizBlock = (body) =>
+              (body || '').match(/<!-- pr-quiz:start -->([\s\S]*?)<!-- pr-quiz:end -->/)?.[1] ?? null;
+            const quizKey = (body) =>
+              quizBlock(body)?.match(/<!-- pr-quiz-key:([A-Za-z0-9+/=\s]+?) -->/)?.[1].replace(/\s/g, '') ?? null;
+
+            function parseTicks(body) {
+              const ticks = {};
+              let current = null;
+              for (const line of (quizBlock(body) ?? '').split('\n')) {
+                const question = line.match(/^\*\*(\d+)\.\s/);
+                if (question) {
+                  current = question[1];
+                  ticks[current] = [];
+                  continue;
+                }
+                const option = line.match(/^\s*[-*] \[([ xX])\] \*\*([A-F])\)\*\*/);
+                if (option && current && option[1] !== ' ') ticks[current].push(option[2]);
+              }
+              return ticks;
+            }
+
+            const body = context.payload.pull_request?.body ?? pr.body;
+            const key = quizKey(body);
+            if (!key) {
+              await setStatus('pending', 'No quiz found in the PR description');
+              return;
+            }
+            const quiz = JSON.parse(Buffer.from(key, 'base64').toString('utf8'));
+            const questions = Object.keys(quiz.answers);
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number: prNumber, per_page: 100,
+            });
+            const botComments = comments.filter((c) => c.user.login === BOT);
+
+            // A pass carries over to new commits as long as the quiz itself wasn't regenerated.
+            if (botComments.some((c) => c.body.includes(passMarker(quiz.id)))) {
+              await setStatus('success', 'Quiz passed');
+              return;
+            }
+
+            // One result comment, updated in place, so ticking boxes doesn't spam the PR.
+            const resultComment = botComments.find((c) => c.body.includes(RESULT_MARKER));
+            const report = (text) => {
+              const commentBody = `${RESULT_MARKER}\n${text}`;
+              return resultComment
+                ? github.rest.issues.updateComment({ owner, repo, comment_id: resultComment.id, body: commentBody })
+                : github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: commentBody });
+            };
+
+            let who;
+            let given;
+
+            if (context.eventName === 'issue_comment') {
+              who = context.payload.comment.user.login;
+              given = {};
+              const answerText = context.payload.comment.body.split('\n')[0].replace(/^\/answer/, '');
+              for (const [, n, letter] of answerText.matchAll(/(\d+)\s*[.:)\-]?\s*([a-z])\b/gi)) {
+                given[n] = letter.toUpperCase();
+              }
+              const missing = questions.filter((n) => !given[n]);
+              if (missing.length) {
+                await report(
+                  `@${who} your answer is missing question ${missing.join(', ')}. ` +
+                  `Tick the boxes in the description, or answer all questions in one comment, e.g. \`/answer ${questions.map((n) => `${n}A`).join(' ')}\`.`,
+                );
+                return;
+              }
+            } else {
+              const ticks = parseTicks(body);
+              const answered = questions.filter((n) => ticks[n]?.length === 1);
+              const multiple = questions.filter((n) => (ticks[n]?.length ?? 0) > 1);
+              const progress = multiple.length
+                ? `Tick only one answer for question ${multiple.join(', ')}`
+                : `${answered.length} of ${questions.length} questions answered`;
+
+              // Only grade when checkboxes of the same quiz changed. Other edits, a newly
+              // published quiz and pushes just refresh the pending status.
+              const previousBody = context.payload.changes?.body?.from;
+              const ticksChanged =
+                context.payload.action === 'edited' &&
+                previousBody !== undefined &&
+                quizKey(previousBody) === key &&
+                JSON.stringify(parseTicks(previousBody)) !== JSON.stringify(ticks);
+
+              if (!ticksChanged || answered.length < questions.length) {
+                await setStatus('pending', progress);
+                return;
+              }
+              who = context.payload.sender.login;
+              given = Object.fromEntries(questions.map((n) => [n, ticks[n][0]]));
+            }
+
+            // GitHub removes a reviewer from requested_reviewers once they submit a review, so count past reviewers too.
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner, repo, pull_number: prNumber, per_page: 100,
+            });
+            const allowed = new Set([
+              ...pr.requested_reviewers.map((u) => u.login),
+              ...reviews.map((r) => r.user.login),
+              ...(ALLOW_AUTHOR ? [pr.user.login] : []),
+            ]);
+            if (!allowed.has(who)) {
+              await setStatus('pending', 'Waiting for a requested reviewer to answer the quiz');
+              await report(`@${who} only requested reviewers${ALLOW_AUTHOR ? ' or the PR author' : ''} can answer this quiz. Your answers were not graded.`);
+              return;
+            }
+
+            const wrong = questions.filter((n) => given[n] !== quiz.answers[n]);
+            if (wrong.length === 0) {
+              await setStatus('success', 'Quiz passed');
+              await report(`${passMarker(quiz.id)}\n✅ @${who} passed the quiz (${questions.length}/${questions.length}).`);
+              return;
+            }
+
+            await setStatus('failure', `${wrong.length} of ${questions.length} answers wrong`);
+            const explanations = wrong
+              .map((n) => `- **Question ${n}:** ${quiz.explanations?.[n] ?? 'No explanation available.'}`)
+              .join('\n');
+            await report(
+              `❌ @${who} got ${questions.length - wrong.length}/${questions.length} right. ` +
+              `Wrong: question ${wrong.join(', ')}.\n\n` +
+              `<details><summary>Explanations (contain the answers)</summary>\n\n${explanations}\n\n</details>\n\n` +
+              `Re-read the relevant parts of the diff, then change your ticked answers in the description.`,
+            );
