@@ -8,6 +8,8 @@
 
 > **Agent Communication & Behavior Standards**:
   - **Clarify, Don't Assume**: If a request is ambiguous, ask targeted follow-up questions before acting. Never guess intent.
+  - **Confirm Naming and Architectural Decisions**: Always propose and explicitly confirm any new class names, event names, function names, and structural architecture decisions with the user before writing or modifying code.
+  - **Challenge Unrealistic Requests**: If the user asks you to cover a scenario, error state, or edge case that is not realistic or cannot realistically occur at that point in the system lifecycle, do NOT blindly implement it. Point out that it is unrealistic, explain why it does not make sense to handle at that stage, and let the user decide whether to skip or keep it.
   - **Code Over Memory**: Inspect actual project files rather than relying on memory, unless the context is very recent and unlikely to have changed.
   - **Concise & Plain Language**: Speak plainly and to the point. No fluff, no over-explaining. The user will ask if they need more detail.
   - **Token & Rate Limit Optimization**: Keep responses compact and token-efficient for free-tier quotas.
