@@ -3,6 +3,10 @@
 > **Rule Inheritance & Fallback Directive**:
   Every project-specific rule file (`GEMINI.md` or `AGENTS.md` in project roots) must reference and extend this global configuration (`C:\Users\Or Dvir\.gemini\rules.md`). If this global file is ever unreachable, missing, or the path changed, the agent MUST proactively alert the user immediately so the link can be restored.
 
+> **CRITICAL RULE — NEVER RUN BUILDS UNILATERALLY**:
+  **DO NOT EVER RUN BUILDS YOURSELF UNLESS EXPLICITLY REQUESTED BY THE USER!**
+  If a build, compilation check, or verification is required or recommended, **ASK THE USER TO RUN IT MANUALLY**, and they will report the result back. Never execute Gradle commands (`./gradlew assembleDebug`, `compileDebugKotlin`, `build`, etc.) autonomously.
+
 > **Non-Disruptive Guardrail for Existing Codebases**:
   If an existing project or file does not currently conform to these rules, **DO NOT automatically or unilaterally refactor it**. Focus strictly on the user's immediate request to avoid noise and unexpected breakages. You may *suggest* modernization/alignment, but execution must be explicitly requested or permitted by the user.
 
@@ -18,7 +22,7 @@
 
 - Search with `rg`/`grep` (or `Select-String`) using specific patterns. Never open files just to search them.
 - Read only the line ranges you need. Don't re-read a file you already read unless it changed.
-- Don't run Gradle builds unless I ask. I run builds myself.
+- **NEVER RUN BUILDS**: Do not ever run Gradle or build commands yourself unless explicitly requested by the user. If a build is required, ask the user to run it manually and report the result.
 - If asked to build, redirect output to a file and show only errors:
   `./gradlew.bat assembleDebug --quiet > build.log 2>&1`, then
   `Select-String -Path build.log -Pattern "e:|error|FAILURE" | Select-Object -First 40`
@@ -124,7 +128,7 @@
   org.gradle.parallel=true
   org.gradle.configuration-cache=true
   ```
-- Verify builds and tests via `./gradlew assembleDebug` or `./gradlew testDebugUnitTest` upon major changes.
+- If the user explicitly asks to verify builds/tests, run `./gradlew assembleDebug` or `./gradlew testDebugUnitTest`. Otherwise, ask the user to run the build manually and report the result. Never run builds autonomously.
 - Use `android layout` or `android screen capture` when debugging live UI on devices/emulators.
 
 ---
