@@ -3,11 +3,17 @@
 > **Rule Inheritance & Fallback Directive**:
   Every project-specific rule file (`GEMINI.md` or `AGENTS.md` in project roots) must reference and extend this global configuration (`C:\Users\Or Dvir\.gemini\rules.md`). If this global file is ever unreachable, missing, or the path changed, the agent MUST proactively alert the user immediately so the link can be restored.
 
+> **CRITICAL RULE — NEVER RUN BUILDS UNILATERALLY**:
+  **DO NOT EVER RUN BUILDS YOURSELF UNLESS EXPLICITLY REQUESTED BY THE USER!**
+  If a build, compilation check, or verification is required or recommended, **ASK THE USER TO RUN IT MANUALLY**, and they will report the result back. Never execute Gradle commands (`./gradlew assembleDebug`, `compileDebugKotlin`, `build`, etc.) autonomously.
+
 > **Non-Disruptive Guardrail for Existing Codebases**:
   If an existing project or file does not currently conform to these rules, **DO NOT automatically or unilaterally refactor it**. Focus strictly on the user's immediate request to avoid noise and unexpected breakages. You may *suggest* modernization/alignment, but execution must be explicitly requested or permitted by the user.
 
 > **Agent Communication & Behavior Standards**:
   - **Clarify, Don't Assume**: If a request is ambiguous, ask targeted follow-up questions before acting. Never guess intent.
+  - **Confirm Implementation When Not 100% Clear**: If you are not 100% certain how the user wants something implemented, do not guess or assume. Briefly state your understanding or propose the approach, ask for confirmation ("Just to confirm — is this how you want it implemented?"), and wait for approval before making changes.
+  - **Challenge Unrealistic Requests**: If the user asks you to cover a scenario, error state, or edge case that is not realistic or cannot realistically occur at that point in the system lifecycle, do NOT blindly implement it. Point out that it is unrealistic, explain why it does not make sense to handle at that stage, and let the user decide whether to skip or keep it.
   - **Code Over Memory**: Inspect actual project files rather than relying on memory, unless the context is very recent and unlikely to have changed.
   - **Concise & Plain Language**: Speak plainly and to the point. No fluff, no over-explaining. The user will ask if they need more detail.
   - **Token & Rate Limit Optimization**: Keep responses compact and token-efficient for free-tier quotas.
@@ -16,7 +22,7 @@
 
 - Search with `rg`/`grep` (or `Select-String`) using specific patterns. Never open files just to search them.
 - Read only the line ranges you need. Don't re-read a file you already read unless it changed.
-- Don't run Gradle builds unless I ask. I run builds myself.
+- **NEVER RUN BUILDS**: Do not ever run Gradle or build commands yourself unless explicitly requested by the user. If a build is required, ask the user to run it manually and report the result.
 - If asked to build, redirect output to a file and show only errors:
   `./gradlew.bat assembleDebug --quiet > build.log 2>&1`, then
   `Select-String -Path build.log -Pattern "e:|error|FAILURE" | Select-Object -First 40`
@@ -122,7 +128,7 @@
   org.gradle.parallel=true
   org.gradle.configuration-cache=true
   ```
-- Verify builds and tests via `./gradlew assembleDebug` or `./gradlew testDebugUnitTest` upon major changes.
+- If the user explicitly asks to verify builds/tests, run `./gradlew assembleDebug` or `./gradlew testDebugUnitTest`. Otherwise, ask the user to run the build manually and report the result. Never run builds autonomously.
 - Use `android layout` or `android screen capture` when debugging live UI on devices/emulators.
 
 ---
